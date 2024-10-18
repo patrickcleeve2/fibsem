@@ -147,6 +147,10 @@ def _draw_rectangle_pattern(
             facecolor=colour,
             alpha=PROPERTIES["opacity"],
         )
+        # hatch for exclusion zones
+        if p.is_exclusion:
+            rect.set_hatch("x")
+            rect.set_facecolor("black")
         if i == 1:
             rect.set_label(f"{name}")
         patches.append(rect)

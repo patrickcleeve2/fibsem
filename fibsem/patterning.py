@@ -328,7 +328,54 @@ class TrenchPattern(BasePattern):
             time = time
         )
 
+        exclusion_zones: List[Dict[str, float]] = protocol.get("exclusion_zones", None)
+        exclusion_patterns = []
+        if exclusion_zones is not None:
+
+
+            # exc
+            # exclusion_zones = [
+            #         {"start": -4e-6, "end": -1e-6},
+            #         {"start": 2e-6, "end": 4e-6}
+            #     ]
+
+            # in protocol:
+            # exclusion_zones: 
+            #     - start: -4.0e-6
+            #     end: -1.0e-6
+            #     - start: 2.0e-6
+            #     end: 4.0e-6
+            # TODO: validation of exclusion zones
+            # just check width is positive, dont check if it overlaps with trench
+            # TODO: require patterns with exclusion zones to be parallel mode?
+            for zone in exclusion_zones:
+                
+                # basic validation
+                if not isinstance(zone, dict):
+                    continue
+                if "start" not in zone or "end" not in zone:
+                    continue
+
+                # get width, centre of zone
+                width = zone["end"] - zone["start"]
+                if width <= 0:
+                    continue
+                point_x = (zone["end"] + zone["start"]) / 2
+
+                # create trench from zone
+                ex_protocol = protocol.copy()
+                ex_protocol["lamella_width"] = width
+                del ex_protocol["exclusion_zones"] # prevent recursion
+                point = Point(point_x, point.y)
+
+                pats =  TrenchPattern().define(ex_protocol, point)
+                for pat in pats:
+                    pat.is_exclusion = True
+                    exclusion_patterns.append(pat)
+                
         self.patterns = [lower_pattern_settings, upper_pattern_settings]
+        if exclusion_patterns:
+            self.patterns.extend(exclusion_patterns)
         self.protocol = protocol
         self.point = point
         return self.patterns
