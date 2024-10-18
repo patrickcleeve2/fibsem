@@ -505,7 +505,7 @@ def _create_annulus_shape(width, height, inner_radius, outer_radius):
     return donut
 
 IGNORE_SHAPES_LAYERS = ["ruler_line","crosshair","scalebar","scalebar_value", "label", "alignment_area"] # ignore these layers when removing all shapes
-IMAGE_PATTERN_LAYERS = ["annulus-layer", "bmp_Image"]
+IMAGE_PATTERN_LAYERS = ["annulus-layer", "anchor-suspension-layer", "bmp_Image"]
 
 def _remove_all_layers(viewer: napari.Viewer, layer_type = napari.layers.shapes.shapes.Shapes, _ignore: List[str] = []):
 
@@ -552,10 +552,18 @@ def _draw_patterns_in_napari(
         is_annulus: bool = False
         annulus_layer = f"{name}-annulus-layer"
 
+        # special case for anchor suspension
+        is_anchor_suspension = isinstance(stage.pattern, patterning.CircularSuspensionPattern)
+        anchor_suspsenion_layer = f"{name}-anchor-suspension-layer"
         drawn_patterns = []
 
         for pattern_settings in patterns:
-            if isinstance(pattern_settings, FibsemBitmapSettings):
+
+            if is_anchor_suspension:
+                drawn_patterns.append(draw_pattern_shape(pattern_settings, ib_image))
+                continue
+
+            elif isinstance(pattern_settings, FibsemBitmapSettings):
                 if pattern_settings.path == None or pattern_settings.path == '':
                     continue
 
@@ -649,6 +657,26 @@ def _draw_patterns_in_napari(
             else:
                 label_layer.color = cmap
             _ignore.append(annulus_layer)
+
+        if is_anchor_suspension:
+            if anchor_suspsenion_layer in viewer.layers:
+                viewer.layers.remove(viewer.layers[anchor_suspsenion_layer])
+
+            anchor_pattern_image = compose_pattern_image(ib_image.data, drawn_patterns)
+
+            translation = (0, eb_image.data.shape[1])
+            label_layer = viewer.add_labels(data=anchor_pattern_image, 
+                                translate=translation, 
+                                name=anchor_suspsenion_layer,
+                                blending="additive",
+                                opacity=0.6)            
+            cmap = {0: "black", 1: COLOURS[i % len(COLOURS)]}
+            if hasattr(label_layer, "colormap"): # attribute changed in napari 0.5.0+
+                label_layer.colormap = cmap
+            else:
+                label_layer.color = cmap
+            _ignore.append(anchor_suspsenion_layer)
+
 
         t2 = time.time()
         # remove all un-updated layers (assume they have been deleted)        

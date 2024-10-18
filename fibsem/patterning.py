@@ -107,6 +107,7 @@ REQUIRED_KEYS = {
     "Clover": ("radius", "depth"),
     "TriForce": ("height", "width", "depth"),
     "Trapezoid": ("inner_width", "outer_width", "trench_height", "depth", "distance", "n_rectangles", "overlap"),
+    "CircularSuspension": ("spacing", "depth", "anchor_width", "inner_anchor_height", "outer_anchor_height", "anchor_outer_radius", "anchor_inner_radius", "external_radius"),
 }
 
 
@@ -1055,6 +1056,84 @@ class TrapezoidPattern(BasePattern):
         return self.patterns
 
 
+@dataclass
+class CircularSuspensionPattern(BasePattern):
+    name: str = "CircularSuspension"
+    required_keys: Tuple[str] = REQUIRED_KEYS["CircularSuspension"]
+    patterns = None
+    protocol = None
+    point = None
+
+    def define(self, protocol: dict, point: Point = Point()) -> List[FibsemPatternSettings]:
+        check_keys(protocol, self.required_keys)
+        self.patterns = []
+                
+        depth = protocol["depth"]
+        inner_anchor_height = protocol["inner_anchor_height"]
+        outer_anchor_height = protocol["outer_anchor_height"]
+        anchor_outer_radius = protocol["anchor_outer_radius"]
+        anchor_inner_radius = protocol["anchor_inner_radius"]
+        external_radius = protocol["external_radius"]
+        anchor_width = protocol["anchor_width"]
+        spacing = protocol["spacing"] / 2 # half spacing
+
+        thickness = anchor_outer_radius - anchor_inner_radius
+
+        left_center = Point(point.x - spacing, point.y)
+        right_center = Point(point.x + spacing, point.y)
+
+
+        for side, center in zip(["left", "right"], [left_center, right_center]):
+
+            outer_circle_settings = FibsemCircleSettings(
+                radius = external_radius,
+                thickness = 0,
+                depth = depth,
+                centre_x=center.x,
+                centre_y=center.y,
+                is_exclusion=False
+            )
+
+            inner_circle_settings = FibsemCircleSettings(
+                radius = anchor_outer_radius,
+                depth = depth,
+                thickness=thickness,
+                centre_x=center.x,
+                centre_y=center.y,
+                is_exclusion=True
+            )
+
+            left_rect_settings = FibsemRectangleSettings(
+                width=anchor_width,
+                height=inner_anchor_height if side == "right" else outer_anchor_height,
+                depth=depth,
+                centre_x=center.x - external_radius + anchor_width / 2,
+                centre_y=center.y,
+                is_exclusion=True
+            )
+            right_rect_settings = FibsemRectangleSettings(
+                width=anchor_width,
+                height=outer_anchor_height if side == "right" else inner_anchor_height,
+                depth=depth,
+                centre_x=center.x + external_radius - anchor_width / 2,
+                centre_y=center.y,
+                is_exclusion=True
+            )
+
+            self.patterns.extend([
+                outer_circle_settings, 
+                inner_circle_settings,
+                left_rect_settings,
+                right_rect_settings,
+            ])
+
+
+        self.protocol = protocol
+        self.point = point
+        return self.patterns
+
+
+
 __PATTERNS__ = [
     RectanglePattern,
     LinePattern,
@@ -1074,6 +1153,7 @@ __PATTERNS__ = [
     BitmapPattern,
     AnnulusPattern,
     TrapezoidPattern,
+    CircularSuspensionPattern,
 ]
 
 

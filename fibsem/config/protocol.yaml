@@ -142,4 +142,13 @@ patterns:
     overlap: 0.0
     scan_direction: "ToptoBottom"
     type: "Trapezoid"
-  
+  CircularSuspension:
+    spacing: 10.0e-6
+    depth: 5.0e-6
+    inner_anchor_height: 2.0e-6
+    outer_anchor_height: 1.0e-6
+    anchor_outer_radius: 2.0e-6
+    anchor_inner_radius: 1.0e-6
+    external_radius: 2.5e-6
+    anchor_width: 1.0e-6
+    type: CircularSuspension 
